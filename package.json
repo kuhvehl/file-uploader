@@ -1,0 +1,26 @@
+{
+  "name": "file-uploader",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@prisma/client": "^5.19.0",
+    "@quixo3/prisma-session-store": "^3.1.13",
+    "eslint": "^9.9.1",
+    "express": "^4.19.2",
+    "express-session": "^1.18.0",
+    "passport": "^0.6.0",
+    "passport-local": "^1.0.0",
+    "prisma": "^5.19.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}
