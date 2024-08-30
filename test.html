@@ -11,7 +11,8 @@
         margin: 0 auto;
         padding: 20px;
       }
-      button {
+      button,
+      input[type="file"] {
         margin: 10px 0;
         padding: 10px;
       }
@@ -36,6 +37,10 @@
 
     <h2>Logout</h2>
     <button onclick="logout()">Logout</button>
+
+    <h2>Upload File</h2>
+    <input type="file" id="fileInput" />
+    <button onclick="uploadFile()">Upload</button>
 
     <div id="response"></div>
 
@@ -68,6 +73,7 @@
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password }),
+          credentials: "include",
         })
           .then((response) => response.json())
           .then(showResponse)
@@ -75,7 +81,31 @@
       }
 
       function logout() {
-        fetch("http://localhost:3000/logout", { method: "GET" })
+        fetch("http://localhost:3000/logout", {
+          method: "GET",
+          credentials: "include",
+        })
+          .then((response) => response.json())
+          .then(showResponse)
+          .catch((error) => showResponse({ error: error.message }));
+      }
+
+      function uploadFile() {
+        const fileInput = document.getElementById("fileInput");
+        const file = fileInput.files[0];
+        if (!file) {
+          showResponse({ error: "Please select a file" });
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        fetch("http://localhost:3000/upload", {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+        })
           .then((response) => response.json())
           .then(showResponse)
           .catch((error) => showResponse({ error: error.message }));
