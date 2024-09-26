@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <h1>Welcome, <%= user.username %>!</h1>
+
+    <!-- Form to create a new folder -->
+    <h2>Create a New Folder</h2>
+    <form action="/user/folders" method="POST">
+      <input type="text" name="name" placeholder="Folder Name" required />
+      <button type="submit">Create Folder</button>
+    </form>
+
+    <!-- Form to upload files -->
+    <h2>Upload File</h2>
+    <form action="/upload" method="POST" enctype="multipart/form-data">
+      <input type="file" name="file" required />
+      <button type="submit">Upload</button>
+    </form>
+
+    <!-- Display folders and their files -->
+    <h2>Your Folders</h2>
+    <ul>
+      <% folders.forEach(folder => { %>
+      <li>
+        <h3><%= folder.name %></h3>
+        <ul>
+          <% folder.files.forEach(file => { %>
+          <li><%= file.name %></li>
+          <% }) %>
+        </ul>
+      </li>
+      <% }) %>
+    </ul>
+
+    <a href="/logout">Logout</a>
+  </body>
+</html>
