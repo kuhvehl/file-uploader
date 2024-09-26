@@ -5,6 +5,7 @@ const { PrismaClient } = require("@prisma/client");
 const multer = require("multer");
 const path = require("path");
 const upload = require("./multerSetup");
+const folderRoutes = require("./routes/folders");
 
 const app = express();
 const prisma = new PrismaClient();
@@ -22,6 +23,8 @@ app.use(
 );
 app.use(passport.initialize());
 app.use(passport.session());
+
+app.use("/user/folders", folderRoutes);
 
 // Routes will be added here
 app.post("/upload", upload.single("file"), (req, res) => {
