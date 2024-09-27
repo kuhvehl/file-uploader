@@ -13,7 +13,7 @@ router.post("/", async (req, res) => {
         userId: req.user.id,
       },
     });
-    res.status(201).json(folder);
+    res.redirect("/dashboard");
   } catch (error) {
     res.status(500).json({ error: "Error creating folder" });
   }

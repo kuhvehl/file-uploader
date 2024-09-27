@@ -13,6 +13,17 @@
     <h2>Upload File</h2>
     <form action="/upload" method="POST" enctype="multipart/form-data">
       <input type="file" name="file" required />
+
+      <!-- Dropdown to select folder -->
+      <label for="folder-select-upload">Choose a folder (optional):</label>
+      <select id="folder-select-upload" name="folderId">
+        <option value="">None</option>
+        <!-- Option for no folder -->
+        <% folders.forEach(folder => { %>
+        <option value="<%= folder.id %>"><%= folder.name %></option>
+        <% }) %>
+      </select>
+
       <button type="submit">Upload</button>
     </form>
 
@@ -34,6 +45,12 @@
       <option value="<%= folder.id %>"><%= folder.name %></option>
       <% }) %>
     </select>
+
+    <!-- Folder action buttons (hidden initially) -->
+    <div id="folder-actions" style="display: none">
+      <button id="rename-folder-btn">Rename Folder</button>
+      <button id="delete-folder-btn">Delete Folder</button>
+    </div>
 
     <!-- Section to display files based on the folder selection -->
     <div id="file-list">
@@ -64,19 +81,32 @@
     <script>
       // JavaScript to handle folder selection and display files
       const folderSelect = document.getElementById("folder-select");
+      const folderActions = document.getElementById("folder-actions");
+      const renameFolderBtn = document.getElementById("rename-folder-btn");
+      const deleteFolderBtn = document.getElementById("delete-folder-btn");
       const fileList = document.getElementById("files");
       const fileItems = fileList.querySelectorAll("li");
 
+      let selectedFolderId = null;
+
       folderSelect.addEventListener("change", (e) => {
-        const selectedFolder = e.target.value;
+        selectedFolderId = e.target.value;
 
         let filesVisible = false;
+
+        // Show folder action buttons if a folder is selected
+        if (selectedFolderId !== "all") {
+          folderActions.style.display = "flex";
+          folderActions.style.justifyContent = "space-around";
+        } else {
+          folderActions.style.display = "none";
+        }
 
         fileItems.forEach((item) => {
           const folderId = item.getAttribute("data-folder-id");
 
           // Show all files if "All" is selected, otherwise show only files for the selected folder
-          if (selectedFolder === "all" || folderId === selectedFolder) {
+          if (selectedFolderId === "all" || folderId === selectedFolderId) {
             item.style.display = "block";
             filesVisible = true;
           } else {
@@ -88,6 +118,45 @@
         if (!filesVisible) {
           fileList.innerHTML =
             "<p>You don't have any files in this folder.</p>";
+        }
+      });
+
+      // Handle folder renaming
+      renameFolderBtn.addEventListener("click", () => {
+        const newName = prompt("Enter a new name for the folder:");
+        if (newName) {
+          // Send request to update folder name
+          fetch(`user.username/folders/${selectedFolderId}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ name: newName }),
+          })
+            .then((response) => {
+              if (response.ok) {
+                // Reload the page to reflect the new name
+                window.location.reload();
+              }
+            })
+            .catch((error) => console.error("Error updating folder:", error));
+        }
+      });
+
+      // Handle folder deletion
+      deleteFolderBtn.addEventListener("click", () => {
+        if (confirm("Are you sure you want to delete this folder?")) {
+          // Send request to delete folder
+          fetch(`user.username/folders/${selectedFolderId}`, {
+            method: "DELETE",
+          })
+            .then((response) => {
+              if (response.ok) {
+                // Reload the page to reflect the deletion
+                window.location.reload();
+              }
+            })
+            .catch((error) => console.error("Error deleting folder:", error));
         }
       });
     </script>

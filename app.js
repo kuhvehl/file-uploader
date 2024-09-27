@@ -110,7 +110,7 @@ app.post(
           size: req.file.size,
           url: `/uploads/${req.file.filename}`,
           userId: req.user.id,
-          folderId: req.body.folderId || null, // Optional folder assignment
+          folderId: Number(req.body.folderId) || null, // Optional folder assignment
         },
       });
       res.redirect("/dashboard");
