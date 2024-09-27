@@ -11,7 +11,9 @@
   "description": "",
   "dependencies": {
     "@prisma/client": "^5.20.0",
+    "@quixo3/prisma-session-store": "^3.1.13",
     "bcryptjs": "^2.4.3",
+    "connect-flash": "^0.1.1",
     "ejs": "^3.1.10",
     "express": "^4.21.0",
     "express-session": "^1.18.0",

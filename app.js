@@ -2,6 +2,8 @@ const express = require("express");
 const session = require("express-session");
 const passport = require("./passportConfig");
 const { PrismaClient } = require("@prisma/client");
+const { PrismaSessionStore } = require("@quixo3/prisma-session-store");
+const flash = require("connect-flash");
 const upload = require("./multerConfig");
 const folderRoutes = require("./routes/folders");
 const path = require("path");
@@ -17,14 +19,20 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
   session({
-    secret: "your-secret-key",
+    secret: process.env.SESSION_SECRET || "your-secret-key",
     resave: false,
     saveUninitialized: false,
-    // We'll add the Prisma session store here later
+    store: new PrismaSessionStore(prisma, {
+      checkPeriod: 2 * 60 * 1000, //ms
+      dbRecordIdIsSessionId: true,
+      dbRecordIdFunction: undefined,
+    }),
   })
 );
 app.use(passport.initialize());
 app.use(passport.session());
+
+app.use(flash());
 
 app.use(express.static(path.join(__dirname, "public")));
 
