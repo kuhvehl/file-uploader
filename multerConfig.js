@@ -6,10 +6,17 @@ const storage = multer.diskStorage({
     cb(null, "uploads/");
   },
   filename: function (req, file, cb) {
-    cb(
-      null,
-      file.fieldname + "-" + Date.now() + path.extname(file.originalname)
-    );
+    // Extract the original name and its extension
+    const originalName = path.basename(
+      file.originalname,
+      path.extname(file.originalname)
+    ); // Get the original file name without the extension
+    const fileExtension = path.extname(file.originalname); // Get the file extension
+
+    // Create a new filename with the original name and timestamp
+    const newFilename = `${originalName}-${Date.now()}${fileExtension}`;
+
+    cb(null, newFilename); // Call the callback with the new filename
   },
 });
 

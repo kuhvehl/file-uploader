@@ -77,16 +77,42 @@ function ensureAuthenticated(req, res, next) {
 
 // Protected route example
 app.get("/dashboard", ensureAuthenticated, async (req, res) => {
-  // Fetch folders and files for the user
   const folders = await prisma.folder.findMany({
     where: { userId: req.user.id },
     include: { files: true },
   });
 
-  res.render("dashboard", { user: req.user, folders });
+  const filesWithoutFolder = await prisma.file.findMany({
+    where: { userId: req.user.id, folderId: null },
+  });
+
+  res.render("dashboard", { user: req.user, folders, filesWithoutFolder });
 });
 
-app.use("/user/folders", folderRoutes);
+// File upload route
+app.post(
+  "/upload",
+  ensureAuthenticated,
+  upload.single("file"),
+  async (req, res) => {
+    try {
+      const file = await prisma.file.create({
+        data: {
+          name: req.file.filename,
+          size: req.file.size,
+          url: `/uploads/${req.file.filename}`,
+          userId: req.user.id,
+          folderId: req.body.folderId || null, // Optional folder assignment
+        },
+      });
+      res.redirect("/dashboard");
+    } catch (error) {
+      res.status(500).json({ error: "File upload failed" });
+    }
+  }
+);
+
+app.use("/:username/folders", folderRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

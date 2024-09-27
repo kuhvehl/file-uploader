@@ -9,13 +9,6 @@
   <body>
     <h1>Welcome, <%= user.username %>!</h1>
 
-    <!-- Form to create a new folder -->
-    <h2>Create a New Folder</h2>
-    <form action="/user/folders" method="POST">
-      <input type="text" name="name" placeholder="Folder Name" required />
-      <button type="submit">Create Folder</button>
-    </form>
-
     <!-- Form to upload files -->
     <h2>Upload File</h2>
     <form action="/upload" method="POST" enctype="multipart/form-data">
@@ -23,21 +16,80 @@
       <button type="submit">Upload</button>
     </form>
 
+    <!-- Form to create a new folder -->
+    <h2>Create a New Folder</h2>
+    <form action="/<%= user.username %>/folders" method="POST">
+      <input type="text" name="name" placeholder="Folder Name" required />
+      <button type="submit">Create Folder</button>
+    </form>
+
     <!-- Display folders and their files -->
-    <h2>Your Folders</h2>
-    <ul>
+    <h2>Your Files</h2>
+
+    <!-- Dropdown to select folder -->
+    <label for="folder-select">Choose a folder:</label>
+    <select id="folder-select">
+      <option value="all">All</option>
       <% folders.forEach(folder => { %>
-      <li>
-        <h3><%= folder.name %></h3>
-        <ul>
-          <% folder.files.forEach(file => { %>
-          <li><%= file.name %></li>
-          <% }) %>
-        </ul>
-      </li>
+      <option value="<%= folder.id %>"><%= folder.name %></option>
       <% }) %>
-    </ul>
+    </select>
+
+    <!-- Section to display files based on the folder selection -->
+    <div id="file-list">
+      <!-- Default message if no files exist -->
+      <% if (folders.length === 0 && filesWithoutFolder.length === 0) { %>
+      <p>You don't have any files yet.</p>
+      <% } else { %>
+      <ul id="files">
+        <!-- Files without a folder -->
+        <% filesWithoutFolder.forEach(file => { %>
+        <li data-folder-id="no-folder">
+          <a href="<%= file.url %>" download><%= file.name %></a>
+        </li>
+        <% }); %>
+
+        <!-- Files associated with specific folders -->
+        <% folders.forEach(folder => { %> <% folder.files.forEach(file => { %>
+        <li data-folder-id="<%= folder.id %>">
+          <a href="<%= file.url %>" download><%= file.name %></a>
+        </li>
+        <% }); %> <% }); %>
+      </ul>
+      <% } %>
+    </div>
 
     <a href="/logout">Logout</a>
+
+    <script>
+      // JavaScript to handle folder selection and display files
+      const folderSelect = document.getElementById("folder-select");
+      const fileList = document.getElementById("files");
+      const fileItems = fileList.querySelectorAll("li");
+
+      folderSelect.addEventListener("change", (e) => {
+        const selectedFolder = e.target.value;
+
+        let filesVisible = false;
+
+        fileItems.forEach((item) => {
+          const folderId = item.getAttribute("data-folder-id");
+
+          // Show all files if "All" is selected, otherwise show only files for the selected folder
+          if (selectedFolder === "all" || folderId === selectedFolder) {
+            item.style.display = "block";
+            filesVisible = true;
+          } else {
+            item.style.display = "none";
+          }
+        });
+
+        // If no files are visible after filtering, show the "No files" message
+        if (!filesVisible) {
+          fileList.innerHTML =
+            "<p>You don't have any files in this folder.</p>";
+        }
+      });
+    </script>
   </body>
 </html>
