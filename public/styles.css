@@ -10,6 +10,7 @@ body {
   width: 100vw;
   justify-content: center;
   align-items: center;
+  padding: 10px;
 }
 
 h1 {
@@ -28,16 +29,17 @@ form {
   border-radius: 5px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   margin-bottom: 20px;
-  width: 100%;
+  min-width: 325px;
+  max-width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-self: center;
 }
 
-input[type="text"],
-input[type="password"],
-input[type="file"] {
+input[type='text'],
+input[type='password'],
+input[type='file'] {
   width: 90%;
   padding: 10px;
   margin: 10px 0;
@@ -45,15 +47,10 @@ input[type="file"] {
   border-radius: 4px;
 }
 
-input[type="text"]:focus,
-input[type="password"]:focus {
+input[type='text']:focus,
+input[type='password']:focus {
   border-color: #007bff;
   outline: none;
-}
-
-select {
-  width: 90%;
-  margin-bottom: 5px;
 }
 
 button {
@@ -81,6 +78,17 @@ li {
 
 select {
   margin-top: 5px;
+  margin-bottom: 5px;
+  width: 90%;
+}
+
+#folder-select {
+  width: 100%;
+}
+
+.folder-move {
+  width: 40%;
+  margin-bottom: 10px;
 }
 
 #folder-actions > {
@@ -92,7 +100,22 @@ select {
   width: 48%;
 }
 
-#folder-select {
+#file-list button {
+  margin-bottom: 10px;
   width: 100%;
-  margin-bottom: 5px;
+  background-color: red;
+}
+
+#file-list button:hover {
+  background-color: darkred;
+}
+
+li {
+  width: 100%;
+  border-bottom: 1px solid black;
+  margin-bottom: 10px;
+}
+
+p {
+  margin: 3px 0px;
 }

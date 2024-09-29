@@ -1,25 +1,24 @@
-const express = require("express");
-const session = require("express-session");
-const passport = require("./passportConfig");
-const { PrismaClient } = require("@prisma/client");
-const { PrismaSessionStore } = require("@quixo3/prisma-session-store");
-const flash = require("connect-flash");
-const upload = require("./multerConfig");
-const folderRoutes = require("./routes/folders");
-const path = require("path");
-const bcrypt = require("bcryptjs");
+const express = require('express');
+const session = require('express-session');
+const passport = require('./passportConfig');
+const { PrismaClient } = require('@prisma/client');
+const { PrismaSessionStore } = require('@quixo3/prisma-session-store');
+const flash = require('connect-flash');
+const upload = require('./multerConfig');
+const folderRoutes = require('./routes/folders');
+const path = require('path');
+const bcrypt = require('bcryptjs');
 
 const app = express();
 const prisma = new PrismaClient();
 
-app.set("view engine", "ejs");
+app.set('view engine', 'ejs');
 
-// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "your-secret-key",
+    secret: process.env.SESSION_SECRET || 'your-secret-key',
     resave: false,
     saveUninitialized: false,
     store: new PrismaSessionStore(prisma, {
@@ -34,23 +33,23 @@ app.use(passport.session());
 
 app.use(flash());
 
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, 'public')));
 
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html")); // Adjust path as needed
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html')); // Adjust path as needed
 });
 
 // Authentication routes
 app.post(
-  "/login",
-  passport.authenticate("local", {
-    successRedirect: "/dashboard",
-    failureRedirect: "/login",
+  '/login',
+  passport.authenticate('local', {
+    successRedirect: '/dashboard',
+    failureRedirect: '/login',
     failureFlash: true,
   })
 );
 
-app.post("/register", async (req, res) => {
+app.post('/register', async (req, res) => {
   try {
     const hashedPassword = await bcrypt.hash(req.body.password, 10);
     const user = await prisma.user.create({
@@ -59,19 +58,19 @@ app.post("/register", async (req, res) => {
         password: hashedPassword,
       },
     });
-    console.log("success!");
-    res.redirect("/");
+    console.log('success!');
+    res.redirect('/');
   } catch {
-    res.redirect("/register");
+    res.redirect('/register');
   }
 });
 
-app.get("/logout", (req, res) => {
+app.get('/logout', (req, res) => {
   req.logout((err) => {
     if (err) {
       return next(err);
     }
-    res.redirect("/");
+    res.redirect('/');
   });
 });
 
@@ -80,28 +79,78 @@ function ensureAuthenticated(req, res, next) {
   if (req.isAuthenticated()) {
     return next();
   }
-  res.redirect("/login");
+  res.redirect('/login');
 }
 
 // Protected route example
-app.get("/dashboard", ensureAuthenticated, async (req, res) => {
+app.get('/dashboard', ensureAuthenticated, async (req, res) => {
   const folders = await prisma.folder.findMany({
     where: { userId: req.user.id },
-    include: { files: true },
+    include: {
+      files: {
+        select: {
+          id: true,
+          name: true,
+          url: true,
+          size: true,
+          uploadedAt: true, // Ensure this field is selected
+          folderId: true,
+        },
+      },
+    },
   });
 
   const filesWithoutFolder = await prisma.file.findMany({
     where: { userId: req.user.id, folderId: null },
+    select: {
+      id: true,
+      name: true,
+      url: true,
+      size: true,
+      uploadedAt: true, // Ensure this field is selected
+      folderId: true,
+    },
   });
 
-  res.render("dashboard", { user: req.user, folders, filesWithoutFolder });
+  const selectedFolderId = req.query.folderId || 'all'; // Get the folderId from the query string if it exists
+
+  res.render('dashboard', {
+    user: { username: req.user.username },
+    folders,
+    filesWithoutFolder,
+    selectedFolderId,
+  });
+});
+
+app.put('/files/:id', async (req, res) => {
+  const { folderId } = req.body;
+  try {
+    // Find the file and check if it belongs to the logged-in user
+    const file = await prisma.file.findUnique({
+      where: { id: parseInt(req.params.id) },
+    });
+
+    if (file && file.userId === req.user.id) {
+      await prisma.file.update({
+        where: { id: file.id },
+        data: { folderId: folderId ? parseInt(folderId) : null },
+      });
+      res.status(204).send();
+    } else {
+      res
+        .status(403)
+        .json({ error: 'You do not have permission to update this file' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: 'Error updating file' });
+  }
 });
 
 // File upload route
 app.post(
-  "/upload",
+  '/upload',
   ensureAuthenticated,
-  upload.single("file"),
+  upload.single('file'),
   async (req, res) => {
     try {
       const file = await prisma.file.create({
@@ -113,14 +162,40 @@ app.post(
           folderId: Number(req.body.folderId) || null, // Optional folder assignment
         },
       });
-      res.redirect("/dashboard");
+      res.redirect('/dashboard');
     } catch (error) {
-      res.status(500).json({ error: "File upload failed" });
+      res.status(500).json({ error: 'File upload failed' });
     }
   }
 );
 
-app.use("/:username/folders", folderRoutes);
+// Delete file route
+app.delete('/files/:id', ensureAuthenticated, async (req, res) => {
+  try {
+    // Fetch the file from the database
+    const file = await prisma.file.findUnique({
+      where: { id: parseInt(req.params.id) },
+    });
+
+    // Check if the file belongs to the logged-in user
+    if (file && file.userId === req.user.id) {
+      // Delete the file record from the database only
+      await prisma.file.delete({
+        where: { id: file.id },
+      });
+
+      res.status(200).json({ message: 'File deleted successfully' });
+    } else {
+      res
+        .status(403)
+        .json({ error: 'You do not have permission to delete this file' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: 'Error deleting file' });
+  }
+});
+
+app.use('/folders', folderRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
