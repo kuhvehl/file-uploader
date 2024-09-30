@@ -62,7 +62,7 @@ app.post('/register', async (req, res) => {
     console.log('success!');
     res.redirect('/');
   } catch {
-    res.redirect('/register');
+    res.redirect('/');
   }
 });
 
