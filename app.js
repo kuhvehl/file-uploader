@@ -8,6 +8,7 @@ const upload = require('./multerConfig');
 const folderRoutes = require('./routes/folders');
 const path = require('path');
 const bcrypt = require('bcryptjs');
+const supabase = require('./supabaseConfig');
 
 const app = express();
 const prisma = new PrismaClient();
@@ -44,7 +45,7 @@ app.post(
   '/login',
   passport.authenticate('local', {
     successRedirect: '/dashboard',
-    failureRedirect: '/login',
+    failureRedirect: '/',
     failureFlash: true,
   })
 );
@@ -79,7 +80,7 @@ function ensureAuthenticated(req, res, next) {
   if (req.isAuthenticated()) {
     return next();
   }
-  res.redirect('/login');
+  res.redirect('/');
 }
 
 // Protected route example
@@ -147,23 +148,50 @@ app.put('/files/:id', async (req, res) => {
 });
 
 // File upload route
+
 app.post(
   '/upload',
   ensureAuthenticated,
   upload.single('file'),
   async (req, res) => {
     try {
-      const file = await prisma.file.create({
+      const file = req.file;
+      const fileBuffer = file.buffer;
+      const fileName = `${Date.now()}_${file.originalname}`;
+
+      // Upload file to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('file-uploads') // Replace with your bucket name
+        .upload(fileName, fileBuffer, {
+          contentType: file.mimetype,
+        });
+
+      if (error) throw error;
+
+      // Get public URL for the uploaded file
+      const {
+        data: { publicUrl },
+        error: urlError,
+      } = supabase.storage
+        .from('file-uploads') // Replace with your bucket name
+        .getPublicUrl(fileName);
+
+      if (urlError) throw urlError;
+
+      // Save file information to the database
+      const dbFile = await prisma.file.create({
         data: {
-          name: req.file.filename,
-          size: req.file.size,
-          url: `/uploads/${req.file.filename}`,
+          name: file.originalname,
+          size: file.size,
+          url: publicUrl,
           userId: req.user.id,
-          folderId: Number(req.body.folderId) || null, // Optional folder assignment
+          folderId: Number(req.body.folderId) || null,
         },
       });
+
       res.redirect('/dashboard');
     } catch (error) {
+      console.error('File upload error:', error);
       res.status(500).json({ error: 'File upload failed' });
     }
   }
@@ -172,14 +200,27 @@ app.post(
 // Delete file route
 app.delete('/files/:id', ensureAuthenticated, async (req, res) => {
   try {
-    // Fetch the file from the database
     const file = await prisma.file.findUnique({
       where: { id: parseInt(req.params.id) },
     });
 
-    // Check if the file belongs to the logged-in user
     if (file && file.userId === req.user.id) {
-      // Delete the file record from the database only
+      // Extract filename from URL and decode it
+      const fileNameEncoded = file.url.split('/').pop(); // Extract encoded filename from URL
+      const fileName = decodeURIComponent(fileNameEncoded); // Decode filename to restore spaces
+      console.log('Decoded file name:', fileName);
+
+      // Delete file from Supabase Storage
+      const { error: deleteError } = await supabase.storage
+        .from('file-uploads') // Replace with your bucket name
+        .remove([fileName]);
+
+      if (deleteError) {
+        console.error('Supabase deletion error:', deleteError);
+        throw deleteError;
+      }
+
+      // Delete the file record from the database
       await prisma.file.delete({
         where: { id: file.id },
       });
@@ -191,6 +232,7 @@ app.delete('/files/:id', ensureAuthenticated, async (req, res) => {
         .json({ error: 'You do not have permission to delete this file' });
     }
   } catch (error) {
+    console.error('File deletion error:', error);
     res.status(500).json({ error: 'Error deleting file' });
   }
 });
